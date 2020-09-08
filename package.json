@@ -1,0 +1,14 @@
+{
+  "name": "node-webcrawler",
+  "version": "0.0.1",
+  "description": "As a school assignment, develop a utility to crawl a website that will fetch the index page and perform a series of defined actions with the data.",
+  "main": "app.js",
+  "repository": "https://github.com/msudol/node-webcrawler.git",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Matt Sudol"
+}
