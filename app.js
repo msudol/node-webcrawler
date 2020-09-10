@@ -10,72 +10,79 @@
 // get config values
 const config = require('./config/config.js');
 
-// because I want the CLI to look good
-const colorReadline = require('node-color-readline');
-const chalk = require('chalk');
-const rl = colorReadline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  colorize: function (str) {
-    // Make all input white
-    return str.replace(/.*/g, function (match) {
-        return chalk.white(match);
-    });
-  }
-});
+// get our cli and reader classes
+const CLI = require('./src/cli.js');
+const Spider = require('./src/spider.js');
 
+// set instances
+let cli = new CLI(config.prefix);
+let spider = new Spider(config.url, config.maxDepth);
 
-// cheerio for it's parsing API
-const cheerio = require('cheerio');
+// call whenever the prompt is needed
+function prompt() {
+    cli.rl.prompt();
+};
 
-// simplecrawler - https://www.npmjs.com/package/simplecrawler
-const Crawler = require("simplecrawler");
+// send to reader later as callback function
+function log(data) {
+    console.log(data);
+    prompt();
+};
+// show the CLI Menu on app init.
+cli.showMenu();
 
-// init crawler and set target url from config
-const crawler = new Crawler(config.targetURL);
+// run the crawler on app init (not yet)
+//spider.start(log);
 
-// first page and discovered links - maxDepth 2
-crawler.maxDepth = config.maxDepth;
+// fire off prompt since we aren't starting spider yet, remove this when spider runs first
+prompt();
 
-/*** Do we want to move all configuration values to the config.js? ***/
+// line event - basically creates a stream cli
+cli.rl.on('line', function(input) {
 
-// set to true to keep on targetURL only
-crawler.filterByDomain = false;
+    // accept upper and lower input
+    let line = input.toLowerCase();
+    
+    // close if user types quit
+    if (line === "quit" || line === "q") {
+        cli.rl.close();
+    } 
 
-// some other settings 
-crawler.interval = 250;
-crawler.maxConcurrency = 5;
+    // pull feed
+    else if (line.startsWith("start")) {
+        spider.start(log);
+    }   
 
-// response body for true, raw buffer for false
-crawler.decodeResponses = true;
+    // show titles
+    else if (line.startsWith("titles")) {
+        reader.titles(log);
+    }   
 
-crawler.on("crawlstart", function() {
-    console.log("Crawling started!");
-});
+    // read title
+    else if ((line === "read") || (line.startsWith("read "))) {
+        // split on first space, everything after is considered the args
+        let args = input.split(/ (.+)/)[1];
+        reader.read(args, log);   
+    }  
 
-// event for fetch complete
-crawler.on("fetchcomplete", function(queueItem, responseBody, response) {
-    console.log("> %s (%d bytes) %s", queueItem.url, responseBody.length, response.headers['content-type']);
-});
+    // open title in browser
+    else if ((line === "open") || (line.startsWith("open "))) {
+        // split on first space, everything after is considered the args
+        let args = input.split(/ (.+)/)[1];
+        reader.open(args, log); 
+    }
 
-// When a discovery has completed - whats the diff between fetch and disco???? none?
-crawler.on("discoverycomplete", function(queueItem, resources) {
-    // queueitem = the item that represents the document for the discovered resources
-    // resources - an array of discovered and cleaned urls
+    // help menu
+    else if (line.startsWith("?") || line.startsWith("help")) {
+        cli.showMenu();
+        prompt();
+    }   
+
+    // prompt again
+    else {   
+        console.log("> Unknown command");
+        prompt();
+    }
     
 });
 
-
-
-// overwriting the discoverResources method
-crawler.discoverResources = function(buffer, queueItem) {
-    var $ = cheerio.load(buffer.toString("utf8"));
- 
-    return $("a[href]").map(function () {
-        return $(this).attr("href");
-    }).get();
-};
-
-
-// run the crawler
-crawler.start();

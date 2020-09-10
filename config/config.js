@@ -9,7 +9,7 @@ let config = {};
 config.prefix = 'CMD> ';
 
 // Crawler target
-config.targetURL = 'https://www.usatoday.com/';
+config.url = 'https://www.usatoday.com/';
 
 // First page and discovered links from it are fetched
 config.maxDepth = 2;
