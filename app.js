@@ -13,10 +13,12 @@ const config = require('./config/config.js');
 // get our cli and reader classes
 const CLI = require('./src/cli.js');
 const Spider = require('./src/spider.js');
+const Status = require('./src/status.js');
 
 // set instances
 let cli = new CLI(config.prefix);
 let spider = new Spider(config.url, config.maxDepth);
+let status = new Status();
 
 // call whenever the prompt is needed
 function prompt() {
@@ -54,8 +56,13 @@ cli.rl.on('line', function(input) {
     }   
 
     // show titles
-    else if (line.startsWith("titles")) {
-        reader.titles(log);
+    else if (line.startsWith("links")) {
+        spider.links(log);
+    }   
+
+    // status bar tester
+    else if (line.startsWith("status")) {
+        status.testrun(log);
     }   
 
     // read title

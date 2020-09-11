@@ -20,6 +20,9 @@ function spider(url, maxDepth) {
 
     let crawler = new Crawler(url);
 
+    // testing cache
+    crawler.cache = new Crawler.cache('./cache');
+
     // first page and discovered links - maxDepth 2
     crawler.maxDepth = maxDepth;
 
@@ -35,13 +38,22 @@ function spider(url, maxDepth) {
     // response body for true, raw buffer for false
     crawler.decodeResponses = true;
 
+    // parse links inside comments?
+    crawler.parseHTMLComments = false;
+
+    // dont download unsupported mime-types
+    crawler.downloadUnsupported = false;
+
     crawler.on("crawlstart", function() {
         console.log("Crawling started!");
     });
 
     // event for fetch complete
-    crawler.on("fetchcomplete", function(queueItem, responseBody, response) {
+    crawler.on("fetchcomplete", function(queueItem, responseBody, response) { 
         console.log("> %s (%d bytes) %s", queueItem.url, responseBody.length, response.headers['content-type']);
+
+        // store this?
+
     });
 
     // When a discovery has completed - whats the diff between fetch and disco???? none?
@@ -54,6 +66,8 @@ function spider(url, maxDepth) {
     // Crawler is totally done
     crawler.on("complete", function() {
         
+        // should probably write some data to storage or something
+
         let res = "> Done Crawling!";
 
         // runs the "current callback", an ugly trick I learned years ago that works great in async or event controlled situtations 
@@ -86,5 +100,7 @@ spider.prototype.start = function(callback) {
     this.crawlCompleteCallback = callback;
 
 };
+
+
 
 module.exports = spider;
