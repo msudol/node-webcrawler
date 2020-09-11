@@ -69,7 +69,7 @@ cli.rl.on('line', function(input) {
     else if ((line === "read") || (line.startsWith("read "))) {
         // split on first space, everything after is considered the args
         let args = input.split(/ (.+)/)[1];
-        reader.read(args, log);   
+        spider.read(args, log);   
     }  
 
     // open title in browser
