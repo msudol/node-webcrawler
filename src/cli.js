@@ -29,7 +29,7 @@ const rl = colorReadline.createInterface({
 
 // readline close event
 rl.on('close',function(){
-    console.log("\n> Closing... bye bye!");
+    console.log(chalk.greenBright("\n> Closing... bye bye!"));
     process.exit(0);
 });
 
@@ -37,9 +37,10 @@ rl.on('close',function(){
 cli.prototype.showMenu = function() {
     console.log(chalk.inverse("=== Node-Webcrawler Commands ==="));
     console.log(chalk.magentaBright(" * start: start the spider for the target website")); 
-    console.log(chalk.magentaBright(" * titles: show index of news titles")); 
-    console.log(chalk.magentaBright(" * read [int]: read the content snippet of title [int]"));     
-    console.log(chalk.magentaBright(" * open [int]: open the feed item in your system browser"));     
+    console.log(chalk.magentaBright(" * pages: show index of all crawled pages")); 
+    console.log(chalk.magentaBright(" * word [str]: find all pages with word [str] and how many"));  
+    console.log(chalk.magentaBright(" * read [int]: read a text content snippet of page [int]"));     
+    console.log(chalk.magentaBright(" * listlinks [int]: list all the links foud in page [int]"));     
     console.log(chalk.magentaBright(" * quit: close this program"));    
 };
 

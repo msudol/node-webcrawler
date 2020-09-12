@@ -25,15 +25,16 @@ function spider(url, maxDepth) {
 
     var self = this;
 
+    // track the current id later on
     self.currentId = 0;
+
+    // set to the total of pages indexed later on
+    self.indexpages = 0;
 
     // I have jsonfile but I could also just use memory now that we've got it smaller
     self.store = {};
 
     let crawler = new Crawler(url);
-
-    // testing cache - nah
-    //crawler.cache = new Crawler.cache('./cache');
 
     // first page and discovered links - maxDepth 2
     crawler.maxDepth = maxDepth;
@@ -57,7 +58,7 @@ function spider(url, maxDepth) {
     // dont download unsupported mime-types
     crawler.downloadUnsupported = false;
 
-    // I only want html content types
+    // I only want html content types to be fetched as pages
     crawler.addFetchCondition((queueItem, referrerQueueItem, callback) => {
        callback(null, queueItem.url.indexOf(".xml") < 1);
     });
@@ -66,27 +67,37 @@ function spider(url, maxDepth) {
         console.log("Crawling started!");
     });
 
-    // event for fetch complete
+    // event for fetch complete - this is the workhorse function
     crawler.on("fetchcomplete", function(queueItem, responseBody, response) { 
-        
-        console.log(">[%d] %s (%d bytes) %s", self.currentId + 1, queueItem.url, responseBody.length, response.headers['content-type']);
 
-        // store this?
+        // create an empty data object to store this fetch
         let data = {};
 
+        // load cheerio for parsing the html 
         var $ = cheerio.load(responseBody);
-        let linkarr = [];
 
-        var links = $('a'); //jquery get all hyperlinks
-        $(links).each(function(i, link){
-            linkarr.push($(link).attr('href'));
-        });
+        // remove all the inline javascript
+        $('script').remove();
+        
+        // extract just the text of the page 
+        var t = $('body *').contents().map(function() {
+            return (this.type === 'text') ? $(this).text() : '';
+        }).get().join(' ');
 
+        // build our data store from the info above
+        var words = t.replace(/\W*[ \n\t\r]\W*/g,",");
+        let wordarr = words.toLowerCase().split(',');
+        let wordcount = {};
+        wordarr.forEach(function(i) { wordcount[i] = (wordcount[i]||0) + 1;});
 
-        data.links = linkarr;
+        //data.links = linkarr;
         data.depth = queueItem.depth;
         data.id = queueItem.id;
         data.url = queueItem.url;
+        data.bodylen = responseBody.length;
+        data.type = response.headers['content-type'];
+        data.words = wordarr;
+        data.wordcount = wordcount;
         data.responseBody = htmlToText.fromString(responseBody, {
             wordwrap: null,
             hideLinkHrefIfSameAsText: true,
@@ -95,24 +106,11 @@ function spider(url, maxDepth) {
                     return '[image]';
                 }
             }
-
         });
 
-        //console.log(data.responseBody);
-
-        //jsonfile.writeFile(file, data, { flag: 'a' }, function (err) {
-        //    if (err) console.error(err)
-        //})      
-        
+        // store result in object
         self.store[self.currentId] = data;
-        self.currentId++;
         
-    });
-
-    // When a discovery has completed - whats the diff between fetch and disco???? none?
-    crawler.on("discoverycomplete", function(queueItem, resources) {
-        // queueitem = the item that represents the document for the discovered resources
-        // resources - an array of discovered and cleaned urls
     });
 
     // Crawler is totally done
@@ -123,13 +121,35 @@ function spider(url, maxDepth) {
             if (err) console.error(err)
         }) 
 
+        // because the fetch will be less than the discover when samedomain is true
+        var note = "";
+        if (crawler.filterByDomain) {
+            note = "(Excluding non-domain pages)";
+        }
+
         let items = Object.keys(self.store).length;
-        let res = `> Done Crawling! Found ${items} valid items.`;
+        let res = chalk.red.bold(`> Done Crawling! Found ${items} valid index pages. ${note} \n`);
 
         // runs the "current callback", an ugly trick I learned years ago that works great in async or event controlled situtations 
         // as long as you're only waiting on this one event that is.
         self.crawlCompleteCallback(res);
         
+    });
+
+    // fired when the discovery of linked resources has completed   
+    crawler.on("discoverycomplete", function(queueItem, resources) {
+        
+        if (queueItem.id == 1) {
+            console.log(chalk.red.bold("Found %d potential index links."), resources.length);
+            self.indexpages = resources.length;
+        }
+
+        console.log(">[%d / %d] %s (%d bytes) %s ", self.currentId + 1, self.indexpages, self.store[self.currentId].url, self.store[self.currentId].bodylen, self.store[self.currentId].type);
+
+        // add discovered links to the store and increment the currentid + 1
+        self.store[self.currentId].links = resources;
+        self.currentId++;
+
     });
 
     // overwriting the discoverResources method
@@ -148,16 +168,77 @@ function spider(url, maxDepth) {
 
 };
 
+// start the web crawler
 spider.prototype.start = function(callback) {
-
     this.crawler.start();
-
     // a temporary space for a waiting callback that can be called after the event we are waiting for is finished... ugly, but works great
     this.crawlCompleteCallback = callback;
-
 };
 
+// gets every page with word count of word argument and logs it
+spider.prototype.pages = function(callback) {
+
+    let res = "";
+    
+    var store = this.store;
+
+    // has the feed been pulled yet?
+    if (Object.keys(store).length === 0 && store.constructor === Object) {
+        res = "> No items exist, try running start";
+    }
+    else {
+        res = chalk.red.bold("> Searching site index for all pages...\n");
+        res += "[##]  URL \n";
+        Object.keys(store).forEach(function(key) {
+            let c = parseInt(key) + 1;
+            res += "[" + (c) + "]  " + store[key].url + "\n";
+        });
+    }
+
+    callback(res);
+}
+
+// read the body of an indexed page
 spider.prototype.read = function(args, callback) {
+
+    let res = "";
+    
+    // has the feed been pulled yet?
+    if (Object.keys(this.store).length === 0 && this.store.constructor === Object) {
+        res = "> No items exist, try running start";
+    }
+    else {
+
+        let argcheck = true;
+
+        // input should be only int
+        let intreg = /^\d+$/;
+        let index = null;
+
+        if ((args !== undefined) && (args !== null)) {
+            if ((intreg.test(args)) && (args >= 1) && (args <= Object.keys(this.store).length)) {
+                index = parseInt(args);
+            }
+            else {
+                argcheck = false;
+            }
+        }
+
+        if (argcheck) {
+            res += chalk.red.bold(this.store[index - 1].url) + "\n";
+            res += chalk.white.inverse(this.store[index - 1].responseBody);
+        }
+        else {
+            res = "> Unknown index, try read [int].  Check 'pages' for available indices.";
+        }
+
+    }
+    
+    callback(res);
+}
+
+// function to list links for a link index
+spider.prototype.listlinks = function(args, callback) {
 
     let res = "";
     
@@ -185,14 +266,84 @@ spider.prototype.read = function(args, callback) {
 
         if (argcheck) {
             res += chalk.red.bold(this.store[index - 1].url) + "\n";
-            res += chalk.white.inverse(this.store[index - 1].responseBody);
+            for (var i = 0; i < this.store[index - 1].links.length; i++) {
+                res += "[" + (i + 1) + "]  " + this.store[index - 1].links[i] + "\n";
+            }
         }
         else {
-            res = "> Unknown index, try read [int].  Check 'links' for available indices.";
+            res = "> Unknown index, try listlinks [int].  Check 'pages' for available indices.";
         }
 
     }
     
+    callback(res);
+}
+
+// helper function for development to list words for a link index
+spider.prototype.listwords = function(args, callback) {
+
+    let res = "";
+    
+    // has the feed been pulled yet?
+    if (Object.keys(this.store).length === 0 && this.store.constructor === Object) {
+        res = "> No items exist, try running start";
+    }
+    else {
+
+        let argcheck = true;
+
+        // input should be only int
+        let intreg = /^\d+$/;
+        let index = null;
+        if ((args !== undefined) && (args !== null)) {
+            if ((intreg.test(args)) && (args >= 1) && (args <= Object.keys(this.store).length)) {
+                index = parseInt(args);
+            }
+            else {
+                argcheck = false;
+            }
+        }
+
+        if (argcheck) {
+            res += chalk.red.bold(this.store[index - 1].url) + "\n";
+            res += chalk.white.inverse(this.store[index - 1].wordcount.toString());            
+        }
+        else {
+            res = "> Unknown index, try listwords [int].  Check 'pages' for available indices.";
+        }
+
+    }
+    
+    callback(res);
+}
+
+// gets every page with word count of word argument and logs it
+spider.prototype.word = function(args, callback) {
+
+    let res = "";
+    
+    var store = this.store;
+
+    // has the feed been pulled yet?
+    if (Object.keys(store).length === 0 && store.constructor === Object) {
+        res = "> No items exist, try running start";
+    }
+    else if ((args !== undefined) && (args !== null)) {
+        // args is a word to check the store for
+        let arg = args.toLowerCase();
+        res = chalk.red.bold("> Searching site index for pages with word: " + arg + "...\n");
+        res += "[#]  URL \n";
+        Object.keys(store).forEach(function(key) {
+            if (store[key].wordcount[arg] > 0) {
+                res += "[" + store[key].wordcount[arg] + "]  " + store[key].url + "\n";
+            }
+        });
+
+    }
+    else {
+        res = "> Unknown index, try word [str].  Check 'pages' for available indices.";
+    }
+  
     callback(res);
 }
 

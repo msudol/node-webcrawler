@@ -30,10 +30,18 @@ function log(data) {
     console.log(data);
     prompt();
 };
+
+// send to reader later as callback function
+function startlog(data) {
+    console.log(data);
+    cli.showMenu();
+    prompt();
+};
+
 // show the CLI Menu on app init.
 cli.showMenu();
 
-// run the crawler on app init (not yet)
+// run the crawler on app init (I think we should just show menu and use the start command)
 //spider.start(log);
 
 // fire off prompt since we aren't starting spider yet, remove this when spider runs first
@@ -52,18 +60,20 @@ cli.rl.on('line', function(input) {
 
     // pull feed
     else if (line.startsWith("start")) {
-        spider.start(log);
+        spider.start(startlog);
     }   
 
-    // show titles
-    else if (line.startsWith("links")) {
-        spider.links(log);
+    // show all indexed pages
+    else if (line.startsWith("pages")) {
+        spider.pages(log);
     }   
 
-    // status bar tester
-    else if (line.startsWith("status")) {
-        status.testrun(log);
-    }   
+    // word check
+    else if ((line === "word") || (line.startsWith("word "))) {
+        // split on all spaces to get just the first word if more are typed
+        let args = input.split(" ");
+        spider.word(args[1], log);   
+    }  
 
     // read title
     else if ((line === "read") || (line.startsWith("read "))) {
@@ -72,12 +82,19 @@ cli.rl.on('line', function(input) {
         spider.read(args, log);   
     }  
 
-    // open title in browser
-    else if ((line === "open") || (line.startsWith("open "))) {
+    // read links for title
+    else if ((line === "listlinks") || (line.startsWith("listlinks "))) {
         // split on first space, everything after is considered the args
         let args = input.split(/ (.+)/)[1];
-        reader.open(args, log); 
-    }
+        spider.listlinks(args, log);   
+    }  
+
+    // read the words for the title
+    else if ((line === "listwords") || (line.startsWith("listwords "))) {
+        // split on first space, everything after is considered the args
+        let args = input.split(/ (.+)/)[1];
+        spider.listwords(args, log);   
+    }  
 
     // help menu
     else if (line.startsWith("?") || line.startsWith("help")) {
