@@ -7,10 +7,10 @@
 // chalk - https://www.npmjs.com/package/chalk
 const chalk = require('chalk');
 
-// cheerio for it's parsing API
+// cheerio - https://www.npmjs.com/package/cheerio
 const cheerio = require('cheerio');
 
-// https://www.npmjs.com/package/html-to-text
+// html-to-text - https://www.npmjs.com/package/html-to-text
 const htmlToText = require('html-to-text');
 
 // jsonfile for reading and writing to file - https://www.npmjs.com/package/jsonfile
