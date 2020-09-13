@@ -14,7 +14,10 @@ const cheerio = require('cheerio');
 const htmlToText = require('html-to-text');
 
 // simplecrawler - https://www.npmjs.com/package/simplecrawler
-let Crawler = require("simplecrawler");
+let Crawler = require('simplecrawler');
+
+// config
+const config = require('../config/config.js');
 
 // spider class wraps an instance of crawler
 function spider(url, maxDepth) {
@@ -38,7 +41,7 @@ function spider(url, maxDepth) {
     /*** Do we want to move all configuration values to the config.js and the spider instance? ***/
 
     // set to true to keep on targetURL only
-    crawler.filterByDomain = true;
+    crawler.filterByDomain = config.sameDomain;
     crawler.scanSubdomains = true;
 
     // some other settings 
@@ -198,6 +201,9 @@ spider.prototype.read = function(args, callback) {
     if (Object.keys(this.store).length === 0 && this.store.constructor === Object) {
         res = "> No items exist, try running start";
     }
+    else if (args === undefined || args === null) {
+        res = "> Unknown index, try read [int].  Check 'pages' for available indices.";
+    }
     else {
 
         let argcheck = true;
@@ -237,6 +243,9 @@ spider.prototype.listlinks = function(args, callback) {
     if (Object.keys(this.store).length === 0 && this.store.constructor === Object) {
         res = "> No items exist, try running start";
     }
+    else if (args === undefined || args === null) {
+        res = "> Unknown index, try listlinks [int].  Check 'pages' for available indices.";
+    }    
     else {
 
         let argcheck = true;
@@ -279,6 +288,9 @@ spider.prototype.listwords = function(args, callback) {
     if (Object.keys(this.store).length === 0 && this.store.constructor === Object) {
         res = "> No items exist, try running start";
     }
+    else if (args === undefined || args === null) {
+        res = "> Unknown index, try listwords [int].  Check 'pages' for available indices.";
+    }
     else {
 
         let argcheck = true;
@@ -319,6 +331,9 @@ spider.prototype.word = function(args, callback) {
     if (Object.keys(store).length === 0 && store.constructor === Object) {
         res = "> No items exist, try running start";
     }
+    else if (args === undefined || args === null) {
+        res = "> No arguments entered! Try searching for a word";
+    }    
     else if ((args !== undefined) && (args !== null)) {
         // args is a word to check the store for
         let arg = args.toLowerCase();
@@ -332,7 +347,7 @@ spider.prototype.word = function(args, callback) {
 
     }
     else {
-        res = "> Unknown index, try word [str].  Check 'pages' for available indices.";
+        res = "> Try word [str] to search for found words!";
     }
   
     callback(res);
