@@ -13,10 +13,6 @@ const cheerio = require('cheerio');
 // html-to-text - https://www.npmjs.com/package/html-to-text
 const htmlToText = require('html-to-text');
 
-// jsonfile for reading and writing to file - https://www.npmjs.com/package/jsonfile
-const jsonfile = require('jsonfile');
-const file = './store/queueData.json';
-
 // simplecrawler - https://www.npmjs.com/package/simplecrawler
 let Crawler = require("simplecrawler");
 
@@ -116,11 +112,6 @@ function spider(url, maxDepth) {
     // Crawler is totally done
     crawler.on("complete", function() {
         
-        // should probably write some data to storage or something
-        jsonfile.writeFile(file, self.store, function (err) {
-            if (err) console.error(err)
-        }) 
-
         // because the fetch will be less than the discover when samedomain is true
         var note = "";
         if (crawler.filterByDomain) {
