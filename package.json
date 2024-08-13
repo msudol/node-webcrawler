@@ -7,7 +7,7 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^4.1.0",
-    "cheerio": "^1.0.0-rc.3",
+    "cheerio": "^1.0.0",
     "cli-progress": "^3.8.2",
     "html-to-text": "^6.0.0",
     "node-color-readline": "^1.0.1",
